@@ -71,6 +71,13 @@
         </div>
 
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+            <div class="input-group" style="margin-bottom: 15px;">
+                <label for="network-select">Select Network</label>
+                <select id="network-select" style="background: #0f172a; color: white; padding: 10px; border-radius: 5px; border: 1px solid #4a5568;">
+                    <option value="testnet" selected>Polygon Amoy Testnet (Free Tokens)</option>
+                    <option value="mainnet">Polygon Mainnet (Real Tokens)</option>
+                </select>
+            </div>
             <button id="connect-btn" onclick="connectWallet()" style="width: 100%; background: #2ecc71;">Connect Wallet</button>
             <div style="margin-top: 10px; font-size: 0.9em; color: #00ffcc;">Wallet: <span id="wallet-address">Not Connected</span></div>
         </div>
@@ -103,9 +110,24 @@
         // ==========================================
         const GAME_CONTRACT_ADDRESS = "0xYOUR_GAME_CONTRACT_ADDRESS_HERE"; 
         const TOKEN_CONTRACT_ADDRESS = "0xYOUR_TOKEN_CONTRACT_ADDRESS_HERE";
-        const AMOY_CHAIN_ID = '0x13882'; 
 
-        // Simplified ABIs needed for the frontend to interact with the contracts
+        const NETWORKS = {
+            mainnet: {
+                chainId: '0x89',
+                chainName: 'Polygon Mainnet',
+                nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+                rpcUrls: ['https://polygon-rpc.com/'],
+                blockExplorerUrls: ['https://polygonscan.com/']
+            },
+            testnet: {
+                chainId: '0x13882',
+                chainName: 'Polygon Amoy Testnet',
+                nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+                rpcUrls: ['https://rpc-amoy.polygon.technology/'],
+                blockExplorerUrls: ['https://amoy.polygonscan.com/']
+            }
+        };
+
         const GAME_ABI = [
             "function admin() view returns (address)",
             "function currentRaceId() view returns (uint256)",
@@ -139,18 +161,32 @@
                 setMessage("❌ MetaMask not found!", "#e74c3c"); return;
             }
 
+            const selectedNetworkKey = document.getElementById('network-select').value;
+            const targetNetwork = NETWORKS[selectedNetworkKey];
+
             try {
-                // Connect Ethers.js
+                setMessage(`Connecting to ${targetNetwork.chainName}...`, "#00ffcc");
+                
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 await provider.send("eth_requestAccounts", []);
                 signer = provider.getSigner();
                 userAddress = await signer.getAddress();
 
-                // Enforce Amoy Testnet
-                const network = await provider.getNetwork();
-                if (network.chainId !== 80002) {
-                    setMessage("Please switch to Polygon Amoy Testnet in MetaMask.", "#e74c3c");
-                    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: AMOY_CHAIN_ID }] });
+                const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+
+                // Network Switching Logic
+                if (currentChainId !== targetNetwork.chainId) {
+                    setMessage(`Switching to ${targetNetwork.chainName}...`, "#f1c40f");
+                    try {
+                        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: targetNetwork.chainId }] });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            setMessage(`Adding ${targetNetwork.chainName} to wallet...`, "#f1c40f");
+                            await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [targetNetwork] });
+                        } else {
+                            setMessage("Network switch rejected.", "#e74c3c"); return;
+                        }
+                    }
                 }
 
                 // Initialize Contracts
@@ -159,6 +195,7 @@
 
                 document.getElementById('wallet-address').innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
                 document.getElementById('connect-btn').style.display = "none";
+                document.getElementById('network-select').disabled = true;
                 
                 setMessage("✅ Connected! Fetching track data...");
 
@@ -168,15 +205,19 @@
 
             } catch (error) {
                 console.error(error);
-                setMessage("Connection failed.", "#e74c3c");
+                setMessage("Connection failed. Did you close the popup?", "#e74c3c");
             }
         }
 
         async function checkAdminStatus() {
-            const adminAddress = await gameContract.admin();
-            if (userAddress.toLowerCase() === adminAddress.toLowerCase()) {
-                document.getElementById('admin-panel').style.display = "flex";
-                generateAdminNameInputs();
+            try {
+                const adminAddress = await gameContract.admin();
+                if (userAddress.toLowerCase() === adminAddress.toLowerCase()) {
+                    document.getElementById('admin-panel').style.display = "flex";
+                    generateAdminNameInputs();
+                }
+            } catch (err) {
+                console.log("Could not check admin. Are the contract addresses correct?", err);
             }
         }
 
@@ -184,26 +225,31 @@
         // 🏇 DYNAMIC TRACK & DATA FETCHING
         // ==========================================
         async function fetchCurrentRace() {
-            currentRaceId = await gameContract.currentRaceId();
-            if (currentRaceId.toNumber() === 0) {
-                setMessage("No races have been created yet."); return;
-            }
+            try {
+                currentRaceId = await gameContract.currentRaceId();
+                if (currentRaceId.toNumber() === 0) {
+                    setMessage("No races have been created yet."); return;
+                }
 
-            const raceData = await gameContract.getRaceDetails(currentRaceId);
-            const state = raceData.state; // 0=Closed, 1=Open, 2=Finished
-            const names = await gameContract.getPonyNames(currentRaceId);
-            
-            buildDynamicTrack(names);
+                const raceData = await gameContract.getRaceDetails(currentRaceId);
+                const state = raceData.state; 
+                const names = await gameContract.getPonyNames(currentRaceId);
+                
+                buildDynamicTrack(names);
 
-            if (state === 1) { // OPEN
-                document.getElementById('pony-select').disabled = false;
-                document.getElementById('bet-amount').disabled = false;
-                document.getElementById('race-btn').disabled = false;
-                startCountdown(raceData.startTime.toNumber());
-                setMessage(`Race #${currentRaceId} is OPEN for betting!`);
-            } else if (state === 2) { // FINISHED
-                document.getElementById('claim-btn').style.display = "block";
-                setMessage(`Race #${currentRaceId} is Finished! Pony #${raceData.winningPony + 1} won!`);
+                if (state === 1) { // OPEN
+                    document.getElementById('pony-select').disabled = false;
+                    document.getElementById('bet-amount').disabled = false;
+                    document.getElementById('race-btn').disabled = false;
+                    startCountdown(raceData.startTime.toNumber());
+                    setMessage(`Race #${currentRaceId} is OPEN for betting!`);
+                } else if (state === 2) { // FINISHED
+                    document.getElementById('claim-btn').style.display = "block";
+                    setMessage(`Race #${currentRaceId} is Finished! Pony #${raceData.winningPony + 1} won!`);
+                }
+            } catch(err) {
+                console.log("Failed to fetch race data.", err);
+                setMessage("Connected, but failed to fetch race data. Check contract addresses.", "#e74c3c");
             }
         }
 
@@ -253,16 +299,15 @@
             if (!amount || amount <= 0) return;
             
             try {
-                // Convert to 18 decimals (Wei standard for tokens)
                 const amountInWei = ethers.utils.parseUnits(amount.toString(), 18);
                 
                 // STEP 1: APPROVE
-                setMessage("Transaction 1/2: Approving Tokens... Please confirm in MetaMask.", "#00ffcc");
+                setMessage("Transaction 1/2: Approving Tokens...", "#00ffcc");
                 const txApprove = await tokenContract.approve(GAME_CONTRACT_ADDRESS, amountInWei);
                 await txApprove.wait();
 
                 // STEP 2: BET
-                setMessage("Transaction 2/2: Placing Bet... Please confirm in MetaMask.", "#00ffcc");
+                setMessage("Transaction 2/2: Placing Bet...", "#00ffcc");
                 const txBet = await gameContract.placeBet(ponyId, amountInWei);
                 await txBet.wait();
 
