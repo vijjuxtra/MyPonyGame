@@ -67,29 +67,50 @@
     <h1>🏁 Web3 Polygon Derby 🏁</h1>
     <p>Connect your wallet to race! (Pays 10-to-1)</p>
 
-    <div class="dashboard">
-        <div class="wallet-info">Wallet: <span id="wallet-address">Not Connected</span></div>
-        <div class="stats">💰 Game Bankroll: $<span id="bankroll">100</span></div>
-        
-        <div class="controls">
-            <button id="connect-btn" onclick="connectAndEnforcePolygon()">Connect MetaMask</button>
-            <br><br>
+<div class="betting-board">
+    
+    <div class="board-header">
+        <h2>Live Betting</h2>
+        <div class="timer-display" id="race-timer">00:00</div>
+    </div>
+
+    <div class="betting-controls">
+        <div class="input-group">
+            <label for="pony-select">Select Pony</label>
             <select id="pony-select" disabled>
                 <option value="0">1. Thunder</option>
                 <option value="1">2. Hoof Hearted</option>
                 <option value="2">3. Glue Stick</option>
-                <option value="3">4. Lightning</option>
-                <option value="4">5. Usain Colt</option>
-                <option value="5">6. Hay Girl Hay</option>
-                <option value="6">7. Pony Soprano</option>
-                <option value="7">8. Mane Attraction</option>
-                <option value="8">9. Trotter</option>
-                <option value="9">10. Secretariat</option>
-            </select>
-            <input type="number" id="bet-amount" placeholder="Bet Amount" min="1" max="100" value="10" disabled>
-            <button id="race-btn" onclick="startRace()" disabled>Place Bet & Race!</button>
+                </select>
+        </div>
+        
+        <div class="input-group">
+            <label for="bet-amount">Bet (MATIC)</label>
+            <input type="number" id="bet-amount" placeholder="e.g. 5" min="1" disabled>
+        </div>
+        
+        <button id="race-btn" onclick="startRace()" disabled>Place Bet</button>
+    </div>
+
+    <div class="results-board">
+        <h3>Previous Race Results</h3>
+        <div class="podium">
+            <div class="place second">
+                🥈 2nd
+                <span class="pony-name" id="last-2nd">Waiting...</span>
+            </div>
+            <div class="place first">
+                🥇 1st
+                <span class="pony-name" id="last-1st">Waiting...</span>
+            </div>
+            <div class="place third">
+                🥉 3rd
+                <span class="pony-name" id="last-3rd">Waiting...</span>
+            </div>
         </div>
     </div>
+
+</div>
 
     <div class="track-container">
         <div class="finish-line"></div>
