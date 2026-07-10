@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web3 Pony Race</title>
-   <style>
+    <title>Web3 Parimutuel Derby</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+    <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a2e; color: #ecf0f1; text-align: center; padding: 10px; }
         h1 { color: #f1c40f; margin-bottom: 5px; }
         
-        /* Betting Board Styles */
+        /* Dashboard & Controls */
         .betting-board { background: linear-gradient(145deg, #16213e, #0f172a); border: 2px solid #8247e5; border-radius: 12px; padding: 25px; max-width: 600px; margin: 0 auto 30px auto; box-shadow: 0 8px 32px rgba(130, 71, 229, 0.2); display: flex; flex-direction: column; gap: 20px; }
         .board-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 15px; }
         .board-header h2 { margin: 0; color: #ecf0f1; font-size: 1.5em; }
         .timer-display { background: #000; color: #00ffcc; padding: 8px 15px; border-radius: 6px; font-family: monospace; font-size: 1.4em; font-weight: bold; border: 1px solid #00ffcc; }
         
-        /* Inputs & Controls */
         .input-group { display: flex; flex-direction: column; text-align: left; flex: 1; }
         .input-group label { font-size: 0.85em; color: #a0aec0; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; }
         select, input { width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid #4a5568; color: white; border-radius: 6px; font-size: 1em; box-sizing: border-box; }
@@ -23,11 +23,11 @@
         #connect-btn:hover:not(:disabled) { background: #27ae60; }
         
         .betting-controls { display: flex; gap: 15px; align-items: flex-end; }
-        #race-btn { padding: 12px 25px; background: #8247e5; color: white; border: none; border-radius: 6px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.2s; height: 44px; }
-        #race-btn:hover:not(:disabled) { background: #9d68ec; }
+        .action-btn { padding: 12px 25px; background: #8247e5; color: white; border: none; border-radius: 6px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.2s; height: 44px; }
+        .action-btn:hover:not(:disabled) { background: #9d68ec; }
         button:disabled { background: #4a5568 !important; color: #a0aec0 !important; cursor: not-allowed !important; }
 
-        /* Track Styles */
+        /* Racetrack */
         .track-container { width: 95%; max-width: 1000px; margin: 0 auto; background: #27ae60; border: 5px solid #ecf0f1; border-radius: 5px; position: relative; padding: 5px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .lane { height: 40px; border-bottom: 2px dashed rgba(255, 255, 255, 0.4); position: relative; display: flex; align-items: center; }
         .lane:last-child { border-bottom: none; }
@@ -37,8 +37,10 @@
         
         #message-board { margin-top: 20px; font-size: 1.3em; font-weight: bold; min-height: 30px; color: #f1c40f; }
     </style>
-        <body>
-      <h1>🏁 Web3 Parimutuel Derby 🏁</h1>
+</head>
+<body>
+
+    <h1>🏁 Web3 Parimutuel Derby 🏁</h1>
 
     <div id="admin-panel" class="betting-board" style="display: none; border-color: #e74c3c;">
         <div class="board-header">
@@ -51,24 +53,25 @@
                 <input type="number" id="admin-pony-count" value="8" min="8" max="16" onchange="generateAdminNameInputs()">
             </div>
             <div class="input-group">
-                <label>Countdown Timer (Minutes)</label>
-                <input type="number" id="admin-timer" value="5" min="1">
+                <label>Countdown Timer (Seconds)</label>
+                <input type="number" id="admin-timer" value="300" min="1">
             </div>
         </div>
 
         <div id="admin-names-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;"></div>
 
-        <button id="create-race-btn" onclick="adminCreateRace()" style="width: 100%; background: #e74c3c; margin-top: 15px;">Create Race on Blockchain</button>
+        <button id="create-race-btn" class="action-btn" onclick="adminCreateRace()" style="width: 100%; background: #e74c3c; margin-top: 15px;">1. Create Race on Blockchain</button>
+        <button id="resolve-race-btn" class="action-btn" onclick="adminResolveRace()" style="width: 100%; background: #f39c12; margin-top: 5px;">2. Resolve Race & Take Fee</button>
     </div>
 
     <div class="betting-board" id="player-panel">
         <div class="board-header">
             <h2>Live Betting Pool</h2>
-            <div class="timer-display" id="race-timer">00:00</div>
+            <div class="timer-display" id="race-timer">Waiting...</div>
         </div>
 
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-            <button id="connect-btn" onclick="connectAndEnforceNetwork()" style="width: 100%; background: #2ecc71;">Connect Wallet</button>
+            <button id="connect-btn" onclick="connectWallet()" style="width: 100%; background: #2ecc71;">Connect Wallet</button>
             <div style="margin-top: 10px; font-size: 0.9em; color: #00ffcc;">Wallet: <span id="wallet-address">Not Connected</span></div>
         </div>
 
@@ -76,43 +79,51 @@
             <div class="input-group">
                 <label>Select Pony</label>
                 <select id="pony-select" disabled>
-                    <option>Waiting for Admin to create race...</option>
+                    <option>Waiting for Admin...</option>
                 </select>
             </div>
             <div class="input-group">
                 <label>Bet (Tokens)</label>
-                <input type="number" id="bet-amount" placeholder="100" min="1" disabled>
+                <input type="number" id="bet-amount" placeholder="e.g. 10" min="1" disabled>
             </div>
-            <button id="race-btn" onclick="placeWeb3Bet()" disabled>Approve & Bet</button>
+            <button id="race-btn" class="action-btn" onclick="placeWeb3Bet()" disabled>Approve & Bet</button>
         </div>
+        
+        <button id="claim-btn" class="action-btn" onclick="claimWinnings()" style="width: 100%; margin-top: 10px; display: none; background: #2ecc71;">Claim Winnings!</button>
     </div>
 
     <div class="track-container" id="dynamic-track" style="display: none;">
-        <div class="finish-line"></div>
         </div>
 
     <div id="message-board">Please connect your wallet.</div>
 
     <script>
-        // --- WEB3 CONNECTION LOGIC ---
-        const NETWORKS = {
-            mainnet: {
-                chainId: '0x89',
-                chainName: 'Polygon Mainnet',
-                nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-                rpcUrls: ['https://polygon-rpc.com/'],
-                blockExplorerUrls: ['https://polygonscan.com/']
-            },
-            testnet: {
-                chainId: '0x13882',
-                chainName: 'Polygon Amoy Testnet',
-                nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-                rpcUrls: ['https://rpc-amoy.polygon.technology/'],
-                blockExplorerUrls: ['https://amoy.polygonscan.com/']
-            }
-        };
+        // ==========================================
+        // ⚙️ WEB3 CONFIGURATION (UPDATE THESE!)
+        // ==========================================
+        const GAME_CONTRACT_ADDRESS = "0xYOUR_GAME_CONTRACT_ADDRESS_HERE"; 
+        const TOKEN_CONTRACT_ADDRESS = "0xYOUR_TOKEN_CONTRACT_ADDRESS_HERE";
+        const AMOY_CHAIN_ID = '0x13882'; 
 
-        let userWalletAddress = null;
+        // Simplified ABIs needed for the frontend to interact with the contracts
+        const GAME_ABI = [
+            "function admin() view returns (address)",
+            "function currentRaceId() view returns (uint256)",
+            "function getRaceDetails(uint256 _raceId) view returns (uint8 state, uint8 ponyCount, uint256 startTime, uint256 totalPool, uint8 winningPony)",
+            "function getPonyNames(uint256 _raceId) view returns (string[] memory)",
+            "function createRace(uint8 _ponyCount, uint256 _countdownSeconds, string[] calldata _names)",
+            "function placeBet(uint8 _ponyId, uint256 _amount)",
+            "function resolveRace()",
+            "function claimReward(uint256 _raceId)"
+        ];
+        
+        const ERC20_ABI = [
+            "function approve(address spender, uint256 amount) returns (bool)",
+            "function balanceOf(address account) view returns (uint256)"
+        ];
+
+        let provider, signer, gameContract, tokenContract, userAddress;
+        let currentRaceId = 0;
 
         function setMessage(msg, color = "#f1c40f") {
             const msgBoard = document.getElementById('message-board');
@@ -120,235 +131,206 @@
             msgBoard.style.color = color;
         }
 
-        function checkWalletAvailability() {
-            const connectBtn = document.getElementById('connect-btn');
+        // ==========================================
+        // 🔌 WALLET CONNECTION & INIT
+        // ==========================================
+        async function connectWallet() {
             if (typeof window.ethereum === 'undefined') {
-                setMessage("❌ No Web3 wallet detected! Please install MetaMask extension.", "#e74c3c");
-                connectBtn.innerText = "MetaMask Required";
-                connectBtn.disabled = true;
-                return false;
+                setMessage("❌ MetaMask not found!", "#e74c3c"); return;
             }
-            return true;
-        }
-
-        async function connectAndEnforceNetwork() {
-            if (!checkWalletAvailability()) return;
-
-            const selectedNetworkKey = document.getElementById('network-select').value;
-            const targetNetwork = NETWORKS[selectedNetworkKey];
 
             try {
-                setMessage(`Connecting to ${targetNetwork.chainName}...`, "#00ffcc");
-                
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+                // Connect Ethers.js
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
 
-                if (currentChainId !== targetNetwork.chainId) {
-                    setMessage(`Switching to ${targetNetwork.chainName}...`, "#f1c40f");
-                    try {
-                        await window.ethereum.request({ 
-                            method: 'wallet_switchEthereumChain', 
-                            params: [{ chainId: targetNetwork.chainId }] 
-                        });
-                    } catch (switchError) {
-                        if (switchError.code === 4902) {
-                            try {
-                                setMessage(`Adding ${targetNetwork.chainName} to wallet...`, "#f1c40f");
-                                await window.ethereum.request({
-                                    method: 'wallet_addEthereumChain',
-                                    params: [targetNetwork],
-                                });
-                            } catch (addError) {
-                                setMessage("Failed to add network.", "#e74c3c");
-                                return;
-                            }
-                        } else {
-                            setMessage("Network switch rejected.", "#e74c3c");
-                            return;
-                        }
-                    }
+                // Enforce Amoy Testnet
+                const network = await provider.getNetwork();
+                if (network.chainId !== 80002) {
+                    setMessage("Please switch to Polygon Amoy Testnet in MetaMask.", "#e74c3c");
+                    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: AMOY_CHAIN_ID }] });
                 }
 
-                userWalletAddress = accounts[0];
-                document.getElementById('wallet-address').innerText = userWalletAddress.substring(0, 6) + "..." + userWalletAddress.substring(38);
+                // Initialize Contracts
+                gameContract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_ABI, signer);
+                tokenContract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, ERC20_ABI, signer);
+
+                document.getElementById('wallet-address').innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
+                document.getElementById('connect-btn').style.display = "none";
                 
-                document.getElementById('connect-btn').style.display = "none"; 
-                document.getElementById('network-select').disabled = true; 
-                
-                document.getElementById('pony-select').disabled = false;
-                document.getElementById('bet-amount').disabled = false;
-                document.getElementById('race-btn').disabled = false;
-                
-                setMessage(`✅ Connected to ${targetNetwork.chainName}!`);
+                setMessage("✅ Connected! Fetching track data...");
+
+                // Check Admin & Fetch Race State
+                await checkAdminStatus();
+                await fetchCurrentRace();
+
             } catch (error) {
-                setMessage("Connection failed. Did you close the MetaMask popup?", "#e74c3c");
-                console.error("MetaMask Error:", error);
+                console.error(error);
+                setMessage("Connection failed.", "#e74c3c");
             }
         }
 
-        window.onload = function() {
-            checkWalletAvailability();
-            if (window.ethereum) {
-                window.ethereum.on('chainChanged', () => window.location.reload());
-                window.ethereum.on('accountsChanged', (accounts) => {
-                    if (accounts.length === 0) window.location.reload(); 
-                });
+        async function checkAdminStatus() {
+            const adminAddress = await gameContract.admin();
+            if (userAddress.toLowerCase() === adminAddress.toLowerCase()) {
+                document.getElementById('admin-panel').style.display = "flex";
+                generateAdminNameInputs();
             }
-        };
-
-        // --- GAME ANIMATION LOGIC (5 Ponies for visual clarity) ---
-        let bankroll = 100;
-        const ponies = ["Thunder", "Hoof Hearted", "Glue Stick", "Lightning", "Usain Colt"];
-        let isRacing = false;
-
-        function startRace() {
-            if (isRacing || !userWalletAddress) return;
-
-            const betInput = document.getElementById('bet-amount');
-            const betAmount = parseInt(betInput.value);
-            const selectedPonyIndex = parseInt(document.getElementById('pony-select').value);
-
-            if (isNaN(betAmount) || betAmount <= 0 || betAmount > bankroll) {
-                setMessage("Invalid bet amount!", "#e74c3c"); return;
-            }
-
-            bankroll -= betAmount;
-            document.getElementById('bankroll').innerText = bankroll;
-            isRacing = true;
-            document.getElementById('race-btn').disabled = true;
-            document.getElementById('pony-select').disabled = true;
-            betInput.disabled = true;
-
-            setMessage("🎺 AND THEY'RE OFF! 🎺");
-
-            const ponyElements = [];
-            for (let i = 0; i < ponies.length; i++) {
-                let el = document.getElementById('pony-' + i);
-                el.style.left = "0%";
-                ponyElements.push(el);
-            }
-            
-            let positions = new Array(ponies.length).fill(0);
-            let finishOrder = []; 
-            const finishLinePercentage = 88; 
-            
-            const raceInterval = setInterval(() => {
-                for (let i = 0; i < ponies.length; i++) {
-                    if (!finishOrder.includes(i)) {
-                        positions[i] += (Math.random() * 2.5) + 0.5;
-                        ponyElements[i].style.left = positions[i] + "%";
-                        if (positions[i] >= finishLinePercentage) finishOrder.push(i);
-                    }
-                }
-
-                if (finishOrder.length >= 3) {
-                    clearInterval(raceInterval);
-                    handleRaceResults(finishOrder, selectedPonyIndex, betAmount);
-                }
-            }, 100); 
         }
 
-        function handleRaceResults(finishOrder, betIndex, betAmount) {
-            const first = finishOrder[0];
-            const second = finishOrder[1];
-            const third = finishOrder[2];
-
-            let message = `🏁 1st: ${ponies[first]} | 2nd: ${ponies[second]} | 3rd: ${ponies[third]}\n`;
-
-            if (betIndex === first) {
-                const winnings = betAmount * 5; 
-                bankroll += winnings;
-                setMessage(message + `🥇 You won 1st Place! (+$${winnings})`, "#2ecc71");
-            } else if (betIndex === second) {
-                const winnings = Math.floor(betAmount * 2.5); 
-                bankroll += winnings;
-                setMessage(message + `🥈 You won 2nd Place! (+$${winnings})`, "#3498db");
-            } else if (betIndex === third) {
-                const winnings = Math.floor(betAmount * 1.5); 
-                bankroll += winnings;
-                setMessage(message + `🥉 You won 3rd Place! (+$${winnings})`, "#f39c12");
-            } else {
-                setMessage(message + `💸 You lost $${betAmount}.`, "#e74c3c");
+        // ==========================================
+        // 🏇 DYNAMIC TRACK & DATA FETCHING
+        // ==========================================
+        async function fetchCurrentRace() {
+            currentRaceId = await gameContract.currentRaceId();
+            if (currentRaceId.toNumber() === 0) {
+                setMessage("No races have been created yet."); return;
             }
 
-            document.getElementById('bankroll').innerText = bankroll;
-            document.getElementById('bet-amount').max = bankroll;
+            const raceData = await gameContract.getRaceDetails(currentRaceId);
+            const state = raceData.state; // 0=Closed, 1=Open, 2=Finished
+            const names = await gameContract.getPonyNames(currentRaceId);
             
-            if (bankroll <= 0) {
-                setMessage("💀 Out of money! Refresh to play again.", "#c0392b");
-            } else {
-                isRacing = false;
-                document.getElementById('race-btn').disabled = false;
+            buildDynamicTrack(names);
+
+            if (state === 1) { // OPEN
                 document.getElementById('pony-select').disabled = false;
                 document.getElementById('bet-amount').disabled = false;
-            }
-        }
-        // --- ADMIN LOGIC & DYNAMIC PONIES ---
-        
-        // Auto-default names so you don't have to type them every time
-        const DEFAULT_NAMES = [
-            "Thunder", "Hoof Hearted", "Glue Stick", "Lightning", 
-            "Usain Colt", "Hay Girl Hay", "Pony Soprano", "Mane Attraction", 
-            "Trotter", "Secretariat", "Sea Biscuit", "Shadowfax", 
-            "Pegasus", "Nightmare", "Bojack", "Roach"
-        ];
-
-        let currentPonies = []; // Will hold the active names for the current race
-
-        // 1. Admin UI: Generates the text boxes to edit names based on the 8-16 count
-        function generateAdminNameInputs() {
-            const container = document.getElementById('admin-names-container');
-            const countInput = document.getElementById('admin-pony-count');
-            let count = parseInt(countInput.value);
-            
-            // Enforce Min 8, Max 16
-            if (count < 8) count = 8;
-            if (count > 16) count = 16;
-            countInput.value = count;
-
-            container.innerHTML = ""; // Clear old inputs
-
-            for (let i = 0; i < count; i++) {
-                const defaultName = DEFAULT_NAMES[i] || `Pony ${i + 1}`;
-                container.innerHTML += `
-                    <div class="input-group">
-                        <label>Lane ${i + 1}</label>
-                        <input type="text" id="admin-name-${i}" value="${defaultName}">
-                    </div>
-                `;
+                document.getElementById('race-btn').disabled = false;
+                startCountdown(raceData.startTime.toNumber());
+                setMessage(`Race #${currentRaceId} is OPEN for betting!`);
+            } else if (state === 2) { // FINISHED
+                document.getElementById('claim-btn').style.display = "block";
+                setMessage(`Race #${currentRaceId} is Finished! Pony #${raceData.winningPony + 1} won!`);
             }
         }
 
-        // 2. Build the visual track and betting dropdown for players
         function buildDynamicTrack(namesArray) {
-            currentPonies = namesArray; // Save to global state
-            
             const track = document.getElementById('dynamic-track');
             const dropdown = document.getElementById('pony-select');
             
-            // Clear previous track and dropdown
             dropdown.innerHTML = "";
             let trackHTML = `<div class="finish-line"></div>`;
 
             for (let i = 0; i < namesArray.length; i++) {
-                // Add to betting dropdown
                 dropdown.innerHTML += `<option value="${i}">${i + 1}. ${namesArray[i]}</option>`;
-                
-                // Add physical lane to the track
                 trackHTML += `
                     <div class="lane">
                         <span class="pony-name-label">${namesArray[i]}</span>
                         <div class="pony" id="pony-${i}">🐎</div>
-                    </div>
-                `;
+                    </div>`;
             }
-
             track.innerHTML = trackHTML;
-            track.style.display = "block"; // Unhide the track
+            track.style.display = "block";
         }
 
-        // Run this once when page loads to set up the default 8 Admin inputs
-        generateAdminNameInputs();
+        function startCountdown(endTimeUnix) {
+            const timerDisplay = document.getElementById('race-timer');
+            const interval = setInterval(() => {
+                const now = Math.floor(Date.now() / 1000);
+                const diff = endTimeUnix - now;
+                if (diff <= 0) {
+                    clearInterval(interval);
+                    timerDisplay.innerText = "00:00 - BETTING CLOSED";
+                    document.getElementById('race-btn').disabled = true;
+                } else {
+                    const minutes = Math.floor(diff / 60).toString().padStart(2, '0');
+                    const seconds = (diff % 60).toString().padStart(2, '0');
+                    timerDisplay.innerText = `${minutes}:${seconds}`;
+                }
+            }, 1000);
+        }
+
+        // ==========================================
+        // 💰 BLOCKCHAIN TRANSACTIONS
+        // ==========================================
+        async function placeWeb3Bet() {
+            const ponyId = document.getElementById('pony-select').value;
+            const amount = document.getElementById('bet-amount').value;
+            
+            if (!amount || amount <= 0) return;
+            
+            try {
+                // Convert to 18 decimals (Wei standard for tokens)
+                const amountInWei = ethers.utils.parseUnits(amount.toString(), 18);
+                
+                // STEP 1: APPROVE
+                setMessage("Transaction 1/2: Approving Tokens... Please confirm in MetaMask.", "#00ffcc");
+                const txApprove = await tokenContract.approve(GAME_CONTRACT_ADDRESS, amountInWei);
+                await txApprove.wait();
+
+                // STEP 2: BET
+                setMessage("Transaction 2/2: Placing Bet... Please confirm in MetaMask.", "#00ffcc");
+                const txBet = await gameContract.placeBet(ponyId, amountInWei);
+                await txBet.wait();
+
+                setMessage("✅ Bet placed successfully! Good luck!", "#2ecc71");
+            } catch (err) {
+                console.error(err);
+                setMessage("Bet transaction failed.", "#e74c3c");
+            }
+        }
+
+        async function claimWinnings() {
+            try {
+                setMessage("Claiming winnings...", "#00ffcc");
+                const tx = await gameContract.claimReward(currentRaceId);
+                await tx.wait();
+                setMessage("✅ Winnings claimed successfully!", "#2ecc71");
+            } catch (err) {
+                console.error(err);
+                setMessage("Claim failed. Did you win?", "#e74c3c");
+            }
+        }
+
+        // --- ADMIN FUNCTIONS ---
+        const DEFAULT_NAMES = ["Thunder", "Hoof Hearted", "Glue Stick", "Lightning", "Usain Colt", "Hay Girl", "Soprano", "Mane", "Trotter", "Secretariat", "Biscuit", "Shadowfax", "Pegasus", "Nightmare", "Bojack", "Roach"];
+        
+        function generateAdminNameInputs() {
+            const container = document.getElementById('admin-names-container');
+            let count = parseInt(document.getElementById('admin-pony-count').value) || 8;
+            if (count < 8) count = 8; if (count > 16) count = 16;
+            
+            container.innerHTML = "";
+            for (let i = 0; i < count; i++) {
+                container.innerHTML += `<div class="input-group"><label>Lane ${i + 1}</label><input type="text" id="admin-name-${i}" value="${DEFAULT_NAMES[i]}"></div>`;
+            }
+        }
+
+        async function adminCreateRace() {
+            const count = parseInt(document.getElementById('admin-pony-count').value);
+            const timer = parseInt(document.getElementById('admin-timer').value);
+            let names = [];
+            for (let i = 0; i < count; i++) {
+                names.push(document.getElementById(`admin-name-${i}`).value);
+            }
+            
+            try {
+                setMessage("Creating Race on Blockchain...", "#f39c12");
+                const tx = await gameContract.createRace(count, timer, names);
+                await tx.wait();
+                setMessage("✅ Race Created!", "#2ecc71");
+                setTimeout(() => window.location.reload(), 2000);
+            } catch (err) {
+                console.error(err);
+                setMessage("Failed to create race.", "#e74c3c");
+            }
+        }
+
+        async function adminResolveRace() {
+            try {
+                setMessage("Resolving Race & Taking Fee...", "#f39c12");
+                const tx = await gameContract.resolveRace();
+                await tx.wait();
+                setMessage("✅ Race Resolved!", "#2ecc71");
+                setTimeout(() => window.location.reload(), 2000);
+            } catch (err) {
+                console.error(err);
+                setMessage("Failed to resolve race.", "#e74c3c");
+            }
+        }
     </script>
 </body>
 </html>
