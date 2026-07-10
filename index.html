@@ -281,6 +281,72 @@
                 document.getElementById('bet-amount').disabled = false;
             }
         }
+        // --- ADMIN LOGIC & DYNAMIC PONIES ---
+        
+        // Auto-default names so you don't have to type them every time
+        const DEFAULT_NAMES = [
+            "Thunder", "Hoof Hearted", "Glue Stick", "Lightning", 
+            "Usain Colt", "Hay Girl Hay", "Pony Soprano", "Mane Attraction", 
+            "Trotter", "Secretariat", "Sea Biscuit", "Shadowfax", 
+            "Pegasus", "Nightmare", "Bojack", "Roach"
+        ];
+
+        let currentPonies = []; // Will hold the active names for the current race
+
+        // 1. Admin UI: Generates the text boxes to edit names based on the 8-16 count
+        function generateAdminNameInputs() {
+            const container = document.getElementById('admin-names-container');
+            const countInput = document.getElementById('admin-pony-count');
+            let count = parseInt(countInput.value);
+            
+            // Enforce Min 8, Max 16
+            if (count < 8) count = 8;
+            if (count > 16) count = 16;
+            countInput.value = count;
+
+            container.innerHTML = ""; // Clear old inputs
+
+            for (let i = 0; i < count; i++) {
+                const defaultName = DEFAULT_NAMES[i] || `Pony ${i + 1}`;
+                container.innerHTML += `
+                    <div class="input-group">
+                        <label>Lane ${i + 1}</label>
+                        <input type="text" id="admin-name-${i}" value="${defaultName}">
+                    </div>
+                `;
+            }
+        }
+
+        // 2. Build the visual track and betting dropdown for players
+        function buildDynamicTrack(namesArray) {
+            currentPonies = namesArray; // Save to global state
+            
+            const track = document.getElementById('dynamic-track');
+            const dropdown = document.getElementById('pony-select');
+            
+            // Clear previous track and dropdown
+            dropdown.innerHTML = "";
+            let trackHTML = `<div class="finish-line"></div>`;
+
+            for (let i = 0; i < namesArray.length; i++) {
+                // Add to betting dropdown
+                dropdown.innerHTML += `<option value="${i}">${i + 1}. ${namesArray[i]}</option>`;
+                
+                // Add physical lane to the track
+                trackHTML += `
+                    <div class="lane">
+                        <span class="pony-name-label">${namesArray[i]}</span>
+                        <div class="pony" id="pony-${i}">🐎</div>
+                    </div>
+                `;
+            }
+
+            track.innerHTML = trackHTML;
+            track.style.display = "block"; // Unhide the track
+        }
+
+        // Run this once when page loads to set up the default 8 Admin inputs
+        generateAdminNameInputs();
     </script>
 </body>
 </html>
