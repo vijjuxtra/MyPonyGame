@@ -108,15 +108,27 @@
     <div id="message-board">Please connect your Polygon wallet to play.</div>
 
     <script>
-        // --- WEB3 CONNECTION LOGIC ---
+      // --- WEB3 CONNECTION LOGIC ---
         const POLYGON_CHAIN_ID = '0x89'; // 137 in hex
         let userWalletAddress = null;
 
-        async function connectAndEnforcePolygon() {
+        // Automatically check for a wallet as soon as the page loads
+        function checkWalletAvailability() {
             if (typeof window.ethereum === 'undefined') {
-                setMessage("No Web3 wallet found! Please install MetaMask.", "#e74c3c");
-                return;
+                setMessage("❌ No Web3 wallet detected! Please install MetaMask to play.", "#e74c3c");
+                const connectBtn = document.getElementById('connect-btn');
+                connectBtn.innerText = "MetaMask Required";
+                connectBtn.disabled = true;
+                connectBtn.style.backgroundColor = "#7f8c8d";
+                return false;
             }
+            return true;
+        }
+
+        async function connectAndEnforcePolygon() {
+            // Guard check
+            if (!checkWalletAvailability()) return;
+
             try {
                 setMessage("Requesting connection...", "#00ffcc");
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -127,8 +139,28 @@
                     try {
                         await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: POLYGON_CHAIN_ID }] });
                     } catch (switchError) {
-                        setMessage("Please switch to Polygon in your wallet.", "#e74c3c");
-                        return;
+                        // Error code 4902 means the network isn't added to MetaMask yet
+                        if (switchError.code === 4902) {
+                            try {
+                                setMessage("Adding Polygon to wallet...");
+                                await window.ethereum.request({
+                                    method: 'wallet_addEthereumChain',
+                                    params: [{
+                                        chainId: POLYGON_CHAIN_ID,
+                                        chainName: 'Polygon Mainnet',
+                                        nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+                                        rpcUrls: ['https://polygon-rpc.com/'],
+                                        blockExplorerUrls: ['https://polygonscan.com/']
+                                    }],
+                                });
+                            } catch (addError) {
+                                setMessage("Failed to add Polygon network.", "#e74c3c");
+                                return;
+                            }
+                        } else {
+                            setMessage("Please switch to Polygon in your wallet.", "#e74c3c");
+                            return;
+                        }
                     }
                 }
 
@@ -187,8 +219,6 @@
 
             setMessage("🎺 AND THEY'RE OFF! 🎺");
 
-            // TODO: In the future, this is where we will ping the Smart Contract instead of instant local animation!
-
             const ponyElements = [];
             for (let i = 0; i < 10; i++) {
                 let el = document.getElementById('pony-' + i);
@@ -239,6 +269,20 @@
                 document.getElementById('bet-amount').disabled = false;
             }
         }
+
+        // Run the wallet check immediately when the window loads
+        window.onload = function() {
+            checkWalletAvailability();
+            
+            // Setup listeners if wallet exists
+            if (window.ethereum) {
+                window.ethereum.on('chainChanged', () => window.location.reload());
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    if (accounts.length > 0) connectAndEnforcePolygon();
+                    else window.location.reload();
+                });
+            }
+        };
     </script>
 </body>
 </html>
