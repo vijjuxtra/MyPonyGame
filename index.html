@@ -192,7 +192,7 @@
 
 <div class="betting-board">
     
-    <div class="board-header">
+ <div class="board-header">
         <h2>Live Betting</h2>
         <div class="timer-display" id="race-timer">00:00</div>
     </div>
@@ -200,8 +200,8 @@
     <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px;">
         <div class="input-group" style="margin-bottom: 15px;">
             <label for="network-select">Select Network</label>
-            <select id="network-select" style="background: #0f172a;">
-                <option value="testnet">Amoy Testnet (Free Fake MATIC)</option>
+            <select id="network-select" style="background: #0f172a; color: white; padding: 10px; border-radius: 5px; border: 1px solid #4a5568; width: 100%;">
+                <option value="testnet" selected>Polygon Amoy Testnet (Free MATIC)</option>
                 <option value="mainnet">Polygon Mainnet (Real MATIC)</option>
             </select>
         </div>
@@ -293,7 +293,6 @@
 
         let userWalletAddress = null;
 
-        // Ensure the button is visible and properly labeled on load
         function checkWalletAvailability() {
             const connectBtn = document.getElementById('connect-btn');
             
@@ -305,7 +304,6 @@
                 return false;
             }
             
-            // Wallet exists, make sure button is ready
             connectBtn.innerText = "Connect Wallet";
             connectBtn.disabled = false;
             connectBtn.style.display = "block";
@@ -315,18 +313,17 @@
         async function connectAndEnforceNetwork() {
             if (!checkWalletAvailability()) return;
 
-            // Get the user's selected network from the dropdown
+            // Read which network the user selected from the dropdown
             const selectedNetworkKey = document.getElementById('network-select').value;
             const targetNetwork = NETWORKS[selectedNetworkKey];
 
             try {
                 setMessage(`Connecting to ${targetNetwork.chainName}...`, "#00ffcc");
                 
-                // Request Accounts
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
 
-                // Check if they are on the right network
+                // If they are on the wrong network, prompt to switch
                 if (currentChainId !== targetNetwork.chainId) {
                     setMessage(`Switching to ${targetNetwork.chainName}...`, "#f1c40f");
                     try {
@@ -335,7 +332,8 @@
                             params: [{ chainId: targetNetwork.chainId }] 
                         });
                     } catch (switchError) {
-                        // If they don't have the network added, add it automatically
+                        // Error 4902 means the network is not in their wallet. 
+                        // This block AUTOMATICALLY adds the Testnet to their wallet!
                         if (switchError.code === 4902) {
                             try {
                                 setMessage(`Adding ${targetNetwork.chainName} to wallet...`, "#f1c40f");
@@ -354,15 +352,14 @@
                     }
                 }
 
-                // SUCCESS: Connected and on the correct network!
+                // SUCCESS: Connected and on the right network!
                 userWalletAddress = accounts[0];
                 document.getElementById('wallet-address').innerText = userWalletAddress.substring(0, 6) + "..." + userWalletAddress.substring(38);
                 
-                // Hide the connect button, they are in!
+                // Lock the network selector and hide the connect button
                 document.getElementById('connect-btn').style.display = "none"; 
-                document.getElementById('network-select').disabled = true; // Lock network choice
+                document.getElementById('network-select').disabled = true; 
                 
-                // Unlock game controls
                 document.getElementById('pony-select').disabled = false;
                 document.getElementById('bet-amount').disabled = false;
                 document.getElementById('race-btn').disabled = false;
@@ -374,16 +371,14 @@
             }
         }
 
-        // Run when page loads
         window.onload = function() {
             checkWalletAvailability();
             
-            // Listeners for wallet changes
             if (window.ethereum) {
                 window.ethereum.on('chainChanged', () => window.location.reload());
                 window.ethereum.on('accountsChanged', (accounts) => {
                     if (accounts.length === 0) {
-                        window.location.reload(); // Reload to reset UI if they disconnect
+                        window.location.reload(); 
                     }
                 });
             }
