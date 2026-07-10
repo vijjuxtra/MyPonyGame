@@ -197,6 +197,18 @@
         <div class="timer-display" id="race-timer">00:00</div>
     </div>
 
+    <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px;">
+        <div class="input-group" style="margin-bottom: 15px;">
+            <label for="network-select">Select Network</label>
+            <select id="network-select" style="background: #0f172a;">
+                <option value="testnet">Amoy Testnet (Free Fake MATIC)</option>
+                <option value="mainnet">Polygon Mainnet (Real MATIC)</option>
+            </select>
+        </div>
+        <button id="connect-btn" onclick="connectAndEnforceNetwork()" style="width: 100%; background: #2ecc71;">Connect Wallet</button>
+        <div class="wallet-info" style="margin-top: 10px; font-size: 0.9em;">Wallet: <span id="wallet-address">Not Connected</span></div>
+    </div>
+
     <div class="betting-controls">
         <div class="input-group">
             <label for="pony-select">Select Pony</label>
@@ -204,7 +216,9 @@
                 <option value="0">1. Thunder</option>
                 <option value="1">2. Hoof Hearted</option>
                 <option value="2">3. Glue Stick</option>
-                </select>
+                <option value="3">4. Lightning</option>
+                <option value="4">5. Usain Colt</option>
+            </select>
         </div>
         
         <div class="input-group">
@@ -213,6 +227,8 @@
         </div>
         
         <button id="race-btn" onclick="startRace()" disabled>Place Bet</button>
+    </div>
+
     </div>
 
     <div class="results-board">
@@ -257,176 +273,118 @@
         let userWalletAddress = null;
 
         // Automatically check for a wallet as soon as the page loads
+     // --- WEB3 CONNECTION & MULTI-NETWORK LOGIC ---
+        const NETWORKS = {
+            mainnet: {
+                chainId: '0x89', // 137
+                chainName: 'Polygon Mainnet',
+                nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+                rpcUrls: ['https://polygon-rpc.com/'],
+                blockExplorerUrls: ['https://polygonscan.com/']
+            },
+            testnet: {
+                chainId: '0x13882', // 80002
+                chainName: 'Polygon Amoy Testnet',
+                nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+                rpcUrls: ['https://rpc-amoy.polygon.technology/'],
+                blockExplorerUrls: ['https://amoy.polygonscan.com/']
+            }
+        };
+
+        let userWalletAddress = null;
+
+        // Ensure the button is visible and properly labeled on load
         function checkWalletAvailability() {
+            const connectBtn = document.getElementById('connect-btn');
+            
             if (typeof window.ethereum === 'undefined') {
-                setMessage("❌ No Web3 wallet detected! Please install MetaMask to play.", "#e74c3c");
-                const connectBtn = document.getElementById('connect-btn');
-                connectBtn.innerText = "MetaMask Required";
+                setMessage("❌ No Web3 wallet detected! Please install MetaMask.", "#e74c3c");
+                connectBtn.innerText = "Install MetaMask to Play";
                 connectBtn.disabled = true;
                 connectBtn.style.backgroundColor = "#7f8c8d";
                 return false;
             }
+            
+            // Wallet exists, make sure button is ready
+            connectBtn.innerText = "Connect Wallet";
+            connectBtn.disabled = false;
+            connectBtn.style.display = "block";
             return true;
         }
 
-        async function connectAndEnforcePolygon() {
-            // Guard check
+        async function connectAndEnforceNetwork() {
             if (!checkWalletAvailability()) return;
 
+            // Get the user's selected network from the dropdown
+            const selectedNetworkKey = document.getElementById('network-select').value;
+            const targetNetwork = NETWORKS[selectedNetworkKey];
+
             try {
-                setMessage("Requesting connection...", "#00ffcc");
+                setMessage(`Connecting to ${targetNetwork.chainName}...`, "#00ffcc");
+                
+                // Request Accounts
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
 
-                if (currentChainId !== POLYGON_CHAIN_ID) {
-                    setMessage("Switching to Polygon Network...");
+                // Check if they are on the right network
+                if (currentChainId !== targetNetwork.chainId) {
+                    setMessage(`Switching to ${targetNetwork.chainName}...`, "#f1c40f");
                     try {
-                        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: POLYGON_CHAIN_ID }] });
+                        await window.ethereum.request({ 
+                            method: 'wallet_switchEthereumChain', 
+                            params: [{ chainId: targetNetwork.chainId }] 
+                        });
                     } catch (switchError) {
-                        // Error code 4902 means the network isn't added to MetaMask yet
+                        // If they don't have the network added, add it automatically
                         if (switchError.code === 4902) {
                             try {
-                                setMessage("Adding Polygon to wallet...");
+                                setMessage(`Adding ${targetNetwork.chainName} to wallet...`, "#f1c40f");
                                 await window.ethereum.request({
                                     method: 'wallet_addEthereumChain',
-                                    params: [{
-                                        chainId: POLYGON_CHAIN_ID,
-                                        chainName: 'Polygon Mainnet',
-                                        nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-                                        rpcUrls: ['https://polygon-rpc.com/'],
-                                        blockExplorerUrls: ['https://polygonscan.com/']
-                                    }],
+                                    params: [targetNetwork],
                                 });
                             } catch (addError) {
-                                setMessage("Failed to add Polygon network.", "#e74c3c");
+                                setMessage("Failed to add the network to your wallet.", "#e74c3c");
                                 return;
                             }
                         } else {
-                            setMessage("Please switch to Polygon in your wallet.", "#e74c3c");
+                            setMessage("Network switch rejected by user.", "#e74c3c");
                             return;
                         }
                     }
                 }
 
-                // Connected successfully! Unlock the game.
+                // SUCCESS: Connected and on the correct network!
                 userWalletAddress = accounts[0];
                 document.getElementById('wallet-address').innerText = userWalletAddress.substring(0, 6) + "..." + userWalletAddress.substring(38);
+                
+                // Hide the connect button, they are in!
                 document.getElementById('connect-btn').style.display = "none"; 
+                document.getElementById('network-select').disabled = true; // Lock network choice
                 
+                // Unlock game controls
                 document.getElementById('pony-select').disabled = false;
                 document.getElementById('bet-amount').disabled = false;
                 document.getElementById('race-btn').disabled = false;
                 
-                setMessage("✅ Connected to Polygon! Place your bets.");
+                setMessage(`✅ Connected to ${targetNetwork.chainName}! Place your bets.`);
             } catch (error) {
-                setMessage("Connection rejected.", "#e74c3c");
+                setMessage("Connection failed or rejected.", "#e74c3c");
+                console.error(error);
             }
         }
 
-        // --- GAME ANIMATION LOGIC ---
-        let bankroll = 100;
-        const ponies = ["Thunder", "Hoof Hearted", "Glue Stick", "Lightning", "Usain Colt", "Hay Girl Hay", "Pony Soprano", "Mane Attraction", "Trotter", "Secretariat"];
-        let isRacing = false;
-
-        function updateBankrollDisplay() {
-            document.getElementById('bankroll').innerText = bankroll;
-            document.getElementById('bet-amount').max = bankroll;
-        }
-
-        function setMessage(msg, color = "#f1c40f") {
-            const msgBoard = document.getElementById('message-board');
-            msgBoard.innerText = msg;
-            msgBoard.style.color = color;
-        }
-
-        function startRace() {
-            if (isRacing || !userWalletAddress) return;
-
-            const betInput = document.getElementById('bet-amount');
-            const betAmount = parseInt(betInput.value);
-            const selectedPonyIndex = parseInt(document.getElementById('pony-select').value);
-
-            if (isNaN(betAmount) || betAmount <= 0) {
-                setMessage("Please enter a valid bet amount!", "#e74c3c"); return;
-            }
-            if (betAmount > bankroll) {
-                setMessage("You don't have enough money for that bet!", "#e74c3c"); return;
-            }
-
-            // Lock controls
-            bankroll -= betAmount;
-            updateBankrollDisplay();
-            isRacing = true;
-            document.getElementById('race-btn').disabled = true;
-            document.getElementById('pony-select').disabled = true;
-            betInput.disabled = true;
-
-            setMessage("🎺 AND THEY'RE OFF! 🎺");
-
-            const ponyElements = [];
-            for (let i = 0; i < 10; i++) {
-                let el = document.getElementById('pony-' + i);
-                el.style.left = "0%";
-                ponyElements.push(el);
-            }
-            let positions = new Array(10).fill(0);
-            const finishLinePercentage = 88; 
-            
-            const raceInterval = setInterval(() => {
-                let raceOver = false;
-                let winnerIndex = -1;
-
-                for (let i = 0; i < ponies.length; i++) {
-                    positions[i] += (Math.random() * 2) + 0.3;
-                    ponyElements[i].style.left = positions[i] + "%";
-                    if (positions[i] >= finishLinePercentage) {
-                        raceOver = true;
-                        if (winnerIndex === -1 || positions[i] > positions[winnerIndex]) {
-                            winnerIndex = i;
-                        }
-                    }
-                }
-
-                if (raceOver) {
-                    clearInterval(raceInterval);
-                    handleRaceResults(winnerIndex, selectedPonyIndex, betAmount);
-                }
-            }, 100); 
-        }
-
-        function handleRaceResults(winnerIndex, betIndex, betAmount) {
-            const winningPony = ponies[winnerIndex];
-            if (winnerIndex === betIndex) {
-                const winnings = betAmount * 10;
-                bankroll += winnings;
-                setMessage(`🏆 ${winningPony} wins! 🎉 You won $${winnings}!`, "#2ecc71");
-            } else {
-                setMessage(`🏆 ${winningPony} wins! 💸 You lost $${betAmount}.`, "#e74c3c");
-            }
-            updateBankrollDisplay();
-            if (bankroll <= 0) {
-                setMessage("💀 You're out of money! Game Over.", "#c0392b");
-            } else {
-                isRacing = false;
-                document.getElementById('race-btn').disabled = false;
-                document.getElementById('pony-select').disabled = false;
-                document.getElementById('bet-amount').disabled = false;
-            }
-        }
-
-        // Run the wallet check immediately when the window loads
+        // Run when page loads
         window.onload = function() {
             checkWalletAvailability();
             
-            // Setup listeners if wallet exists
+            // Listeners for wallet changes
             if (window.ethereum) {
                 window.ethereum.on('chainChanged', () => window.location.reload());
                 window.ethereum.on('accountsChanged', (accounts) => {
-                    if (accounts.length > 0) connectAndEnforcePolygon();
-                    else window.location.reload();
+                    if (accounts.length === 0) {
+                        window.location.reload(); // Reload to reset UI if they disconnect
+                    }
                 });
             }
         };
-    </script>
-</body>
-</html>
