@@ -3,129 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>10 Pony Race Betting Game</title>
+    <title>Web3 Pony Race Betting Game</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #2c3e50;
+            background-color: #1a1a2e;
             color: #ecf0f1;
             text-align: center;
             padding: 10px;
         }
-        h1 {
-            color: #f1c40f;
-            margin-bottom: 5px;
-        }
+        h1 { color: #f1c40f; margin-bottom: 5px; }
+        
+        /* Dashboard & Web3 Wallet Styles */
         .dashboard {
-            background: #34495e;
+            background: #16213e;
             padding: 20px;
             border-radius: 10px;
             display: inline-block;
             margin-bottom: 20px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            border: 2px solid #8247e5; /* Polygon Purple */
         }
-        .stats {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #2ecc71;
-            margin-bottom: 15px;
-        }
+        .stats { font-size: 1.5em; font-weight: bold; color: #2ecc71; margin-bottom: 15px; }
+        .wallet-info { font-family: monospace; color: #00ffcc; margin-bottom: 15px; }
+        
         .controls input, .controls select, .controls button {
-            padding: 8px;
-            font-size: 1em;
-            margin: 5px;
-            border-radius: 5px;
-            border: none;
+            padding: 8px; font-size: 1em; margin: 5px; border-radius: 5px; border: none;
         }
-        .controls button {
-            background-color: #e74c3c;
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        .controls button:hover {
-            background-color: #c0392b;
-        }
-        .controls button:disabled {
-            background-color: #7f8c8d;
-            cursor: not-allowed;
-        }
+        
+        #connect-btn { background-color: #8247e5; color: white; cursor: pointer; font-weight: bold; }
+        #connect-btn:hover { background-color: #6c3abf; }
+        
+        #race-btn { background-color: #e74c3c; color: white; cursor: pointer; font-weight: bold; }
+        #race-btn:hover { background-color: #c0392b; }
+        button:disabled { background-color: #7f8c8d !important; cursor: not-allowed !important; }
         
         /* Track Styles */
         .track-container {
-            width: 95%;
-            max-width: 1000px;
-            margin: 0 auto;
-            background: #27ae60;
-            border: 5px solid #ecf0f1;
-            border-radius: 5px;
-            position: relative;
-            padding: 5px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            width: 95%; max-width: 1000px; margin: 0 auto; background: #27ae60;
+            border: 5px solid #ecf0f1; border-radius: 5px; position: relative;
+            padding: 5px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
         .lane {
-            height: 40px; /* Reduced height to fit 10 lanes comfortably */
-            border-bottom: 2px dashed rgba(255, 255, 255, 0.4);
-            position: relative;
-            display: flex;
-            align-items: center;
+            height: 40px; border-bottom: 2px dashed rgba(255, 255, 255, 0.4);
+            position: relative; display: flex; align-items: center;
         }
-        .lane:last-child {
-            border-bottom: none;
-        }
-        .pony {
-            font-size: 28px; /* Slightly smaller ponies */
-            position: absolute;
-            left: 0%;
-            transition: left 0.1s linear;
-            z-index: 2;
-        }
+        .lane:last-child { border-bottom: none; }
+        .pony { font-size: 28px; position: absolute; left: 0%; transition: left 0.1s linear; z-index: 2; }
         .finish-line {
-            position: absolute;
-            right: 50px;
-            top: 0;
-            bottom: 0;
-            width: 10px;
-            background: repeating-linear-gradient(
-                0deg,
-                #fff,
-                #fff 10px,
-                #000 10px,
-                #000 20px
-            );
-            z-index: 1;
+            position: absolute; right: 50px; top: 0; bottom: 0; width: 10px;
+            background: repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px); z-index: 1;
         }
         .pony-name-label {
-            position: absolute;
-            left: 10px;
-            color: white;
-            font-weight: bold;
-            font-size: 0.9em;
-            text-shadow: 1px 1px 2px black;
-            z-index: 3;
-            opacity: 0.8;
+            position: absolute; left: 10px; color: white; font-weight: bold;
+            font-size: 0.9em; text-shadow: 1px 1px 2px black; z-index: 3; opacity: 0.8;
         }
         
-        #message-board {
-            margin-top: 20px;
-            font-size: 1.3em;
-            font-weight: bold;
-            min-height: 30px;
-            color: #f1c40f;
-        }
+        #message-board { margin-top: 20px; font-size: 1.3em; font-weight: bold; min-height: 30px; color: #f1c40f; }
     </style>
 </head>
 <body>
 
-    <h1>🏁 The Grand 10-Pony Derby 🏁</h1>
-    <p>Turn $100 into a fortune! (Now pays 10-to-1)</p>
+    <h1>🏁 Web3 Polygon Derby 🏁</h1>
+    <p>Connect your wallet to race! (Pays 10-to-1)</p>
 
     <div class="dashboard">
-        <div class="stats">💰 Bankroll: $<span id="bankroll">100</span></div>
+        <div class="wallet-info">Wallet: <span id="wallet-address">Not Connected</span></div>
+        <div class="stats">💰 Game Bankroll: $<span id="bankroll">100</span></div>
         
         <div class="controls">
-            <select id="pony-select">
+            <button id="connect-btn" onclick="connectAndEnforcePolygon()">Connect MetaMask</button>
+            <br><br>
+            <select id="pony-select" disabled>
                 <option value="0">1. Thunder</option>
                 <option value="1">2. Hoof Hearted</option>
                 <option value="2">3. Glue Stick</option>
@@ -137,14 +86,13 @@
                 <option value="8">9. Trotter</option>
                 <option value="9">10. Secretariat</option>
             </select>
-            <input type="number" id="bet-amount" placeholder="Bet Amount" min="1" max="100" value="10">
-            <button id="race-btn" onclick="startRace()">Place Bet & Race!</button>
+            <input type="number" id="bet-amount" placeholder="Bet Amount" min="1" max="100" value="10" disabled>
+            <button id="race-btn" onclick="startRace()" disabled>Place Bet & Race!</button>
         </div>
     </div>
 
     <div class="track-container">
         <div class="finish-line"></div>
-        <!-- 10 Lanes -->
         <div class="lane"><span class="pony-name-label">Thunder</span><div class="pony" id="pony-0">🐎</div></div>
         <div class="lane"><span class="pony-name-label">Hoof Hearted</span><div class="pony" id="pony-1">🐎</div></div>
         <div class="lane"><span class="pony-name-label">Glue Stick</span><div class="pony" id="pony-2">🐎</div></div>
@@ -157,15 +105,51 @@
         <div class="lane"><span class="pony-name-label">Secretariat</span><div class="pony" id="pony-9">🐎</div></div>
     </div>
 
-    <div id="message-board">Welcome to the massive derby! Place your bets.</div>
+    <div id="message-board">Please connect your Polygon wallet to play.</div>
 
     <script>
-        // Game State
+        // --- WEB3 CONNECTION LOGIC ---
+        const POLYGON_CHAIN_ID = '0x89'; // 137 in hex
+        let userWalletAddress = null;
+
+        async function connectAndEnforcePolygon() {
+            if (typeof window.ethereum === 'undefined') {
+                setMessage("No Web3 wallet found! Please install MetaMask.", "#e74c3c");
+                return;
+            }
+            try {
+                setMessage("Requesting connection...", "#00ffcc");
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+
+                if (currentChainId !== POLYGON_CHAIN_ID) {
+                    setMessage("Switching to Polygon Network...");
+                    try {
+                        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: POLYGON_CHAIN_ID }] });
+                    } catch (switchError) {
+                        setMessage("Please switch to Polygon in your wallet.", "#e74c3c");
+                        return;
+                    }
+                }
+
+                // Connected successfully! Unlock the game.
+                userWalletAddress = accounts[0];
+                document.getElementById('wallet-address').innerText = userWalletAddress.substring(0, 6) + "..." + userWalletAddress.substring(38);
+                document.getElementById('connect-btn').style.display = "none"; 
+                
+                document.getElementById('pony-select').disabled = false;
+                document.getElementById('bet-amount').disabled = false;
+                document.getElementById('race-btn').disabled = false;
+                
+                setMessage("✅ Connected to Polygon! Place your bets.");
+            } catch (error) {
+                setMessage("Connection rejected.", "#e74c3c");
+            }
+        }
+
+        // --- GAME ANIMATION LOGIC ---
         let bankroll = 100;
-        const ponies = [
-            "Thunder", "Hoof Hearted", "Glue Stick", "Lightning", "Usain Colt",
-            "Hay Girl Hay", "Pony Soprano", "Mane Attraction", "Trotter", "Secretariat"
-        ];
+        const ponies = ["Thunder", "Hoof Hearted", "Glue Stick", "Lightning", "Usain Colt", "Hay Girl Hay", "Pony Soprano", "Mane Attraction", "Trotter", "Secretariat"];
         let isRacing = false;
 
         function updateBankrollDisplay() {
@@ -180,23 +164,20 @@
         }
 
         function startRace() {
-            if (isRacing) return;
+            if (isRacing || !userWalletAddress) return;
 
             const betInput = document.getElementById('bet-amount');
             const betAmount = parseInt(betInput.value);
             const selectedPonyIndex = parseInt(document.getElementById('pony-select').value);
 
-            // Validation
             if (isNaN(betAmount) || betAmount <= 0) {
-                setMessage("Please enter a valid bet amount!", "#e74c3c");
-                return;
+                setMessage("Please enter a valid bet amount!", "#e74c3c"); return;
             }
             if (betAmount > bankroll) {
-                setMessage("You don't have enough money for that bet!", "#e74c3c");
-                return;
+                setMessage("You don't have enough money for that bet!", "#e74c3c"); return;
             }
 
-            // Deduct bet and lock controls
+            // Lock controls
             bankroll -= betAmount;
             updateBankrollDisplay();
             isRacing = true;
@@ -206,66 +187,52 @@
 
             setMessage("🎺 AND THEY'RE OFF! 🎺");
 
-            // Reset all 10 pony positions dynamically
+            // TODO: In the future, this is where we will ping the Smart Contract instead of instant local animation!
+
             const ponyElements = [];
             for (let i = 0; i < 10; i++) {
                 let el = document.getElementById('pony-' + i);
                 el.style.left = "0%";
                 ponyElements.push(el);
             }
-            
             let positions = new Array(10).fill(0);
-
-            // Start Animation Loop
-            const finishLinePercentage = 88; // Percentage to the finish line
+            const finishLinePercentage = 88; 
             
             const raceInterval = setInterval(() => {
                 let raceOver = false;
                 let winnerIndex = -1;
 
-                // Move each pony
                 for (let i = 0; i < ponies.length; i++) {
-                    // Random forward step
                     positions[i] += (Math.random() * 2) + 0.3;
                     ponyElements[i].style.left = positions[i] + "%";
-
-                    // Check for finish
                     if (positions[i] >= finishLinePercentage) {
                         raceOver = true;
-                        // Determine winner if multiple cross at the exact same tick
                         if (winnerIndex === -1 || positions[i] > positions[winnerIndex]) {
                             winnerIndex = i;
                         }
                     }
                 }
 
-                // Handle Race End
                 if (raceOver) {
                     clearInterval(raceInterval);
                     handleRaceResults(winnerIndex, selectedPonyIndex, betAmount);
                 }
-            }, 100); // 100ms per frame
+            }, 100); 
         }
 
         function handleRaceResults(winnerIndex, betIndex, betAmount) {
             const winningPony = ponies[winnerIndex];
-
             if (winnerIndex === betIndex) {
-                // Now pays 10x because of the 10-pony field
                 const winnings = betAmount * 10;
                 bankroll += winnings;
                 setMessage(`🏆 ${winningPony} wins! 🎉 You won $${winnings}!`, "#2ecc71");
             } else {
                 setMessage(`🏆 ${winningPony} wins! 💸 You lost $${betAmount}.`, "#e74c3c");
             }
-
             updateBankrollDisplay();
-            
-            // Check for Game Over
             if (bankroll <= 0) {
                 setMessage("💀 You're out of money! Game Over.", "#c0392b");
             } else {
-                // Re-enable controls
                 isRacing = false;
                 document.getElementById('race-btn').disabled = false;
                 document.getElementById('pony-select').disabled = false;
