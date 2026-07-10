@@ -4,7 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web3 Pony Race</title>
-    <style>
+   <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a2e; color: #ecf0f1; text-align: center; padding: 10px; }
+        h1 { color: #f1c40f; margin-bottom: 5px; }
+        
+        /* Betting Board Styles */
+        .betting-board { background: linear-gradient(145deg, #16213e, #0f172a); border: 2px solid #8247e5; border-radius: 12px; padding: 25px; max-width: 600px; margin: 0 auto 30px auto; box-shadow: 0 8px 32px rgba(130, 71, 229, 0.2); display: flex; flex-direction: column; gap: 20px; }
+        .board-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 15px; }
+        .board-header h2 { margin: 0; color: #ecf0f1; font-size: 1.5em; }
+        .timer-display { background: #000; color: #00ffcc; padding: 8px 15px; border-radius: 6px; font-family: monospace; font-size: 1.4em; font-weight: bold; border: 1px solid #00ffcc; }
+        
+        /* Inputs & Controls */
+        .input-group { display: flex; flex-direction: column; text-align: left; flex: 1; }
+        .input-group label { font-size: 0.85em; color: #a0aec0; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; }
+        select, input { width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid #4a5568; color: white; border-radius: 6px; font-size: 1em; box-sizing: border-box; }
+        
+        #connect-btn { padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        #connect-btn:hover:not(:disabled) { background: #27ae60; }
+        
+        .betting-controls { display: flex; gap: 15px; align-items: flex-end; }
+        #race-btn { padding: 12px 25px; background: #8247e5; color: white; border: none; border-radius: 6px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.2s; height: 44px; }
+        #race-btn:hover:not(:disabled) { background: #9d68ec; }
+        button:disabled { background: #4a5568 !important; color: #a0aec0 !important; cursor: not-allowed !important; }
+
+        /* Track Styles */
+        .track-container { width: 95%; max-width: 1000px; margin: 0 auto; background: #27ae60; border: 5px solid #ecf0f1; border-radius: 5px; position: relative; padding: 5px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .lane { height: 40px; border-bottom: 2px dashed rgba(255, 255, 255, 0.4); position: relative; display: flex; align-items: center; }
+        .lane:last-child { border-bottom: none; }
+        .pony { font-size: 28px; position: absolute; left: 0%; transition: left 0.1s linear; z-index: 2; }
+        .finish-line { position: absolute; right: 50px; top: 0; bottom: 0; width: 10px; background: repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px); z-index: 1; }
+        .pony-name-label { position: absolute; left: 10px; color: white; font-weight: bold; font-size: 0.9em; text-shadow: 1px 1px 2px black; z-index: 3; }
+        
+        #message-board { margin-top: 20px; font-size: 1.3em; font-weight: bold; min-height: 30px; color: #f1c40f; }
+    </style>
         <body>
       <h1>🏁 Web3 Parimutuel Derby 🏁</h1>
 
