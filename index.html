@@ -5,6 +5,129 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web3 Pony Race Betting Game</title>
     <style>
+        /* --- NEW BETTING BOARD STYLES --- */
+.betting-board {
+    background: linear-gradient(145deg, #16213e, #0f172a);
+    border: 2px solid #8247e5; /* Polygon Purple */
+    border-radius: 12px;
+    padding: 25px;
+    max-width: 600px;
+    margin: 0 auto 30px auto;
+    box-shadow: 0 8px 32px rgba(130, 71, 229, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Header & Timer */
+.board-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 15px;
+}
+.board-header h2 {
+    margin: 0;
+    color: #ecf0f1;
+    font-size: 1.5em;
+}
+.timer-display {
+    background: #000;
+    color: #00ffcc;
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 1.4em;
+    font-weight: bold;
+    border: 1px solid #00ffcc;
+    box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+}
+
+/* Inputs & Betting */
+.betting-controls {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+}
+.input-group {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    flex: 1;
+}
+.input-group label {
+    font-size: 0.85em;
+    color: #a0aec0;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+.betting-controls select, .betting-controls input {
+    width: 100%;
+    padding: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid #4a5568;
+    color: white;
+    border-radius: 6px;
+    font-size: 1em;
+    outline: none;
+    box-sizing: border-box;
+}
+.betting-controls select:focus, .betting-controls input:focus {
+    border-color: #8247e5;
+}
+#race-btn {
+    padding: 12px 25px;
+    background: #8247e5;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 44px; /* Matches input height */
+}
+#race-btn:hover:not(:disabled) {
+    background: #9d68ec;
+    transform: translateY(-2px);
+}
+#race-btn:disabled {
+    background: #4a5568;
+    color: #a0aec0;
+}
+
+/* Last Match Winners Podium */
+.results-board {
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px dashed rgba(255,255,255,0.2);
+}
+.results-board h3 {
+    margin: 0 0 15px 0;
+    font-size: 1em;
+    color: #a0aec0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.podium {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+}
+.place {
+    text-align: center;
+    font-weight: bold;
+    padding: 10px;
+    border-radius: 6px;
+    width: 30%;
+}
+.place.first { background: rgba(241, 196, 15, 0.15); border-bottom: 4px solid #f1c40f; color: #f1c40f; padding-bottom: 20px;}
+.place.second { background: rgba(189, 195, 199, 0.15); border-bottom: 4px solid #bdc3c7; color: #bdc3c7; }
+.place.third { background: rgba(211, 84, 0, 0.15); border-bottom: 4px solid #d35400; color: #d35400; }
+.pony-name { display: block; font-size: 0.9em; margin-top: 5px; color: white; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #1a1a2e;
